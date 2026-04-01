@@ -26,7 +26,8 @@ export function Footer() {
                 alt="Logo Ingryd Galo"
                 width={760}
                 height={272}
-                className="h-28 sm:h-36 md:h-44 lg:h-52 xl:h-56 w-auto"
+                className="h-auto max-h-32 w-auto max-w-full object-contain object-left sm:max-h-40 md:max-h-48 lg:max-h-52 xl:max-h-56"
+                sizes="(max-width: 768px) 100vw, 400px"
               />
             </Link>
             <p className="text-background/70 mb-6 max-w-md">

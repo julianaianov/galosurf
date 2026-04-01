@@ -2,6 +2,14 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -101,16 +109,17 @@ ${formData.payNow ? `${WA.check} Cliente deseja pagar online` : `${WA.card} Paga
     return encodeURIComponent(message)
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
 
-    // Simulate processing
-    await new Promise(resolve => setTimeout(resolve, 1000))
-
-    // Open WhatsApp with the booking message
     const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${generateWhatsAppMessage()}`
-    window.open(whatsappUrl, '_blank')
+
+    // Abrir na mesma ação do clique (sem await/setTimeout), senão o navegador bloqueia window.open em produção.
+    const opened = window.open(whatsappUrl, "_blank", "noopener,noreferrer")
+    if (!opened) {
+      window.location.href = whatsappUrl
+    }
 
     setIsSuccess(true)
     setIsSubmitting(false)
@@ -130,34 +139,52 @@ ${formData.payNow ? `${WA.check} Cliente deseja pagar online` : `${WA.card} Paga
     return tomorrow.toISOString().split('T')[0]
   }
 
-  if (isSuccess) {
-    return (
-      <section id="agendar" className="py-24 bg-muted/50">
-        <div className="container mx-auto px-4">
-          <Card className="max-w-lg mx-auto text-center">
-            <CardContent className="pt-12 pb-8">
-              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Check className="h-10 w-10 text-green-600" />
-              </div>
-              <h3 className="text-2xl font-bold text-foreground mb-2">
-                Solicitação Enviada!
-              </h3>
-              <p className="text-muted-foreground mb-6">
-                Sua mensagem foi enviada para o WhatsApp da Ingryd. 
-                Ela entrará em contato em breve para confirmar sua aula.
-              </p>
-              <Button onClick={() => { setIsSuccess(false); setStep(1); setFormData(prev => ({ ...prev, name: '', phone: '', email: '', message: '' })) }}>
-                Fazer Nova Reserva
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </section>
-    )
+  const resetBookingAfterClose = () => {
+    setIsSuccess(false)
+    setStep(1)
+    setFormData({
+      name: "",
+      phone: "",
+      email: "",
+      package: "avulsa",
+      date: "",
+      time: "",
+      experience: "iniciante",
+      message: "",
+      payNow: false,
+    })
   }
 
   return (
     <section id="agendar" className="py-24 bg-muted/50">
+      <Dialog
+        open={isSuccess}
+        onOpenChange={(open) => {
+          if (!open) resetBookingAfterClose()
+        }}
+      >
+        <DialogContent className="max-h-[min(90dvh,100%)] overflow-y-auto sm:max-w-md">
+          <DialogHeader>
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-green-100">
+              <Check className="h-8 w-8 text-green-600" />
+            </div>
+            <DialogTitle className="text-center text-xl">
+              Solicitação recebida
+            </DialogTitle>
+            <DialogDescription className="text-center text-base leading-relaxed">
+              Obrigado pelo seu interesse! Em breve retornaremos o contato para{" "}
+              <strong className="text-foreground">confirmar seu agendamento</strong>
+              {" "}(data, horário e detalhes da aula).
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="sm:justify-center">
+            <Button type="button" className="w-full sm:w-auto" onClick={resetBookingAfterClose}>
+              Entendi
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-full text-primary text-sm font-medium mb-6">

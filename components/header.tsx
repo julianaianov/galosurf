@@ -33,22 +33,23 @@ export function Header() {
   return (
     <header
       className={cn(
-        "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
+        "fixed top-0 left-0 right-0 z-50 transition-all duration-300 pt-[env(safe-area-inset-top)]",
         isScrolled
           ? "bg-background/95 backdrop-blur-md shadow-md"
           : "bg-transparent"
       )}
     >
-      <nav className="container mx-auto px-4 py-2 md:py-3">
-        <div className="flex items-center justify-between">
-          <Link href="#inicio" className="flex items-center gap-2 group">
+      <nav className="container mx-auto max-w-[100vw] px-3 sm:px-4 py-1.5 sm:py-2 md:py-3">
+        <div className="flex min-w-0 items-center justify-between gap-2">
+          <Link href="#inicio" className="group flex min-w-0 max-w-[72%] shrink items-center sm:max-w-none">
             <Image
               src="/images/logo-galo.png"
               alt="Logo Ingryd Galo"
               width={640}
               height={230}
-              className="h-20 sm:h-24 md:h-28 lg:h-32 xl:h-36 w-auto transition-transform group-hover:scale-[1.02]"
+              className="h-11 w-auto max-h-[10vh] max-w-full object-contain object-left transition-transform group-hover:scale-[1.02] sm:h-16 md:h-20 lg:h-24 xl:h-28 2xl:h-32"
               priority
+              sizes="(max-width: 640px) 70vw, (max-width: 1024px) 240px, 320px"
             />
           </Link>
 

@@ -12,7 +12,7 @@ import { Footer } from "@/components/footer"
 
 export default function HomePage() {
   return (
-    <main className="min-h-screen">
+    <main className="min-h-dvh w-full min-w-0 overflow-x-hidden">
       <Header />
       <Hero />
       <About />

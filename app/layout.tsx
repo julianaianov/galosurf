@@ -28,6 +28,8 @@ export const viewport: Viewport = {
   themeColor: '#0891b2',
   width: 'device-width',
   initialScale: 1,
+  maximumScale: 5,
+  viewportFit: 'cover',
 }
 
 export default function RootLayout({
@@ -37,7 +39,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" className="scroll-smooth">
-      <body className={`${outfit.variable} ${geistMono.variable} font-sans antialiased`}>
+      <body className={`${outfit.variable} ${geistMono.variable} font-sans antialiased min-h-dvh w-full overflow-x-hidden`}>
         {children}
         <Analytics />
       </body>

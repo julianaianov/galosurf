@@ -13,7 +13,7 @@ export function Hero() {
   const [isVideoPlaying, setIsVideoPlaying] = useState(false)
 
   return (
-    <section id="inicio" className="relative min-h-screen flex items-center justify-center overflow-hidden">
+    <section id="inicio" className="relative flex min-h-[100dvh] items-center justify-center overflow-hidden">
       {/* Background Video/Image */}
       <div className="absolute inset-0 z-0">
         <div 
@@ -52,28 +52,28 @@ export function Hero() {
       </div>
 
       {/* Content */}
-      <div className="relative z-20 container mx-auto px-4 text-center">
-        <div className="max-w-4xl mx-auto">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full text-white/90 text-sm mb-6">
-            <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-            Recreio dos Bandeirantes, RJ
+      <div className="relative z-20 mx-auto w-full max-w-[100vw] px-3 pb-28 pt-24 text-center sm:px-4 sm:pb-32 sm:pt-28 md:pt-32 lg:pt-36">
+        <div className="mx-auto max-w-4xl">
+          <div className="mb-4 inline-flex max-w-full items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-xs text-white/90 backdrop-blur-sm sm:mb-6 sm:px-4 sm:py-2 sm:text-sm">
+            <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-green-400 sm:h-2 sm:w-2" />
+            <span className="text-balance">Recreio dos Bandeirantes, RJ</span>
           </div>
           
-          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white mb-6 leading-tight text-balance">
+          <h1 className="mb-4 text-balance text-3xl font-bold leading-tight text-white sm:mb-6 sm:text-4xl md:text-6xl lg:text-7xl">
             Aprenda a Surfar com
             <span className="block text-sunset">Ingryd Galo</span>
           </h1>
           
-          <p className="text-lg md:text-xl text-white/80 mb-8 max-w-2xl mx-auto text-pretty">
+          <p className="mx-auto mb-6 max-w-2xl text-pretty text-base text-white/80 sm:mb-8 sm:text-lg md:text-xl">
             Descubra a liberdade das ondas com aulas personalizadas no paraíso do surf carioca. 
             Do primeiro drop até manobras avançadas.
           </p>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+          <div className="flex w-full flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center sm:gap-4">
             <Button
               asChild
               size="lg"
-              className="bg-primary hover:bg-primary/90 text-primary-foreground text-lg px-8 py-6 shadow-xl shadow-primary/30 transition-transform hover:scale-105"
+              className="w-full bg-primary px-6 py-5 text-base text-primary-foreground shadow-xl shadow-primary/30 transition-transform hover:scale-105 hover:bg-primary/90 sm:w-auto sm:px-8 sm:py-6 sm:text-lg"
             >
               <Link href="#agendar">Agendar Minha Aula</Link>
             </Button>
@@ -81,53 +81,56 @@ export function Hero() {
             <Button
               variant="outline"
               size="lg"
-              className="text-lg px-8 py-6 backdrop-blur-sm text-yellow-950 hover:text-yellow-950"
+              className="w-full px-6 py-5 text-base text-yellow-950 backdrop-blur-sm hover:text-yellow-950 sm:w-auto sm:px-8 sm:py-6 sm:text-lg"
               style={{ backgroundColor: "#f5b860", borderColor: "#f5b860" }}
               onClick={() => setIsVideoPlaying(true)}
             >
-              <Play className="mr-2 h-5 w-5" />
+              <Play className="mr-2 h-5 w-5 shrink-0" />
               Ver Vídeo
             </Button>
           </div>
 
-          <div className="mt-12 grid grid-cols-3 gap-8 max-w-md mx-auto">
+          <div className="mx-auto mt-8 grid max-w-md grid-cols-3 gap-3 sm:mt-12 sm:gap-6 md:gap-8">
             <div className="text-center">
-              <div className="text-3xl md:text-4xl font-bold text-white">500+</div>
-              <div className="text-white/60 text-sm">Alunos</div>
+              <div className="text-2xl font-bold text-white sm:text-3xl md:text-4xl">500+</div>
+              <div className="text-xs text-white/60 sm:text-sm">Alunos</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl md:text-4xl font-bold text-white">8+</div>
-              <div className="text-white/60 text-sm">Anos</div>
+              <div className="text-2xl font-bold text-white sm:text-3xl md:text-4xl">8+</div>
+              <div className="text-xs text-white/60 sm:text-sm">Anos</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl md:text-4xl font-bold text-white">5.0</div>
-              <div className="text-white/60 text-sm">Avaliação</div>
+              <div className="text-2xl font-bold text-white sm:text-3xl md:text-4xl">5.0</div>
+              <div className="text-xs text-white/60 sm:text-sm">Avaliação</div>
             </div>
           </div>
         </div>
       </div>
 
       {/* Scroll Indicator */}
-      <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-20 animate-bounce">
+      <div className="absolute bottom-20 left-1/2 z-20 -translate-x-1/2 animate-bounce pb-[env(safe-area-inset-bottom)] sm:bottom-24">
         <Link href="#sobre" className="text-white/60 hover:text-white transition-colors">
           <ChevronDown className="h-8 w-8" />
         </Link>
       </div>
 
-      {/* Video Modal */}
+      {/* Video Modal — tela cheia */}
       {isVideoPlaying && (
-        <div 
-          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+        <div
+          className="fixed inset-0 z-[100] bg-black pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Vídeo"
           onClick={() => setIsVideoPlaying(false)}
         >
           <div
-            className="relative w-full max-w-4xl aspect-video bg-black rounded-xl overflow-hidden"
+            className="relative h-full min-h-0 w-full min-w-0"
             onClick={(e) => e.stopPropagation()}
           >
             <iframe
               src={INSTAGRAM_REEL_EMBED}
               title="Reel no Instagram"
-              className="absolute inset-0 w-full h-full"
+              className="absolute inset-0 h-full w-full border-0"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
             />
@@ -135,16 +138,19 @@ export function Hero() {
               href={INSTAGRAM_REEL_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="absolute bottom-0 left-0 right-0 z-10 py-2 text-center text-xs text-white/80 bg-black/50 hover:text-white"
+              className="absolute bottom-0 left-0 right-0 z-10 bg-black/60 py-2.5 text-center text-xs text-white/90 hover:bg-black/80 hover:text-white sm:py-3 sm:text-sm"
             >
               Abrir no Instagram
             </a>
             <button
-              className="absolute top-4 right-4 text-white bg-black/50 rounded-full p-2"
+              type="button"
+              className="absolute top-2 right-2 z-20 rounded-full bg-black/60 p-2.5 text-white shadow-lg transition-colors hover:bg-black/80 sm:top-4 sm:right-4 sm:p-3 md:top-6 md:right-6 md:p-4"
               onClick={() => setIsVideoPlaying(false)}
             >
               <span className="sr-only">Fechar</span>
-              ✕
+              <span className="text-xl leading-none md:text-2xl" aria-hidden>
+                ✕
+              </span>
             </button>
           </div>
         </div>
