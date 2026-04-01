@@ -5,6 +5,10 @@ import Link from "next/link"
 import { ChevronDown, Play } from "lucide-react"
 import { useState } from "react"
 
+const INSTAGRAM_REEL_URL =
+  "https://www.instagram.com/reel/DIKRPVfuvhF/?utm_source=ig_web_copy_link&igsh=MzRlODBiNWFlZA=="
+const INSTAGRAM_REEL_EMBED = "https://www.instagram.com/reel/DIKRPVfuvhF/embed/"
+
 export function Hero() {
   const [isVideoPlaying, setIsVideoPlaying] = useState(false)
 
@@ -116,13 +120,25 @@ export function Hero() {
           className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
           onClick={() => setIsVideoPlaying(false)}
         >
-          <div className="relative w-full max-w-4xl aspect-video bg-black rounded-xl overflow-hidden">
+          <div
+            className="relative w-full max-w-4xl aspect-video bg-black rounded-xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
             <iframe
-              src="https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1"
+              src={INSTAGRAM_REEL_EMBED}
+              title="Reel no Instagram"
               className="absolute inset-0 w-full h-full"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
             />
+            <a
+              href={INSTAGRAM_REEL_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="absolute bottom-0 left-0 right-0 z-10 py-2 text-center text-xs text-white/80 bg-black/50 hover:text-white"
+            >
+              Abrir no Instagram
+            </a>
             <button
               className="absolute top-4 right-4 text-white bg-black/50 rounded-full p-2"
               onClick={() => setIsVideoPlaying(false)}
