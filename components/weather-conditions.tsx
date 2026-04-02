@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { 
   Cloud, 
   Sun, 
@@ -15,6 +15,8 @@ import {
   CloudSun
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
+import type { LucideIcon } from "lucide-react"
 
 interface WeatherData {
   temperature: number
@@ -42,6 +44,17 @@ function getWeatherIcon(condition: string) {
   if (lower.includes('partly') || lower.includes('parcialmente')) return CloudSun
   return Sun
 }
+
+/** Sol = amarelo; nuvem / chuva / gotas = azul (cada ícone Lucide = uma cor). */
+function getWeatherIconColorClass(Icon: LucideIcon) {
+  if (Icon === Sun) return "text-amber-400"
+  if (Icon === CloudSun) return "text-sky-500"
+  if (Icon === CloudRain) return "text-blue-500"
+  if (Icon === Cloud) return "text-sky-500"
+  return "text-sky-500"
+}
+
+const iconColorShadow = "drop-shadow-[0_1px_2px_rgba(0,0,0,0.65)]"
 
 function getSurfCondition(waveHeight: number, windSpeed: number, condition: string): { label: string; color: string; description: string } {
   const lower = condition.toLowerCase()
@@ -77,14 +90,46 @@ function getWindBackground(windSpeed?: number) {
   return "url('/images/wind-lines.svg')"
 }
 
-function getTempBackground(condition?: string) {
+/** Acima disso, tratamos como dia quente: fundo de sol (ou sol entre nuvens), não céu cinza. */
+const HOT_TEMP_C = 27
+
+function getTempBackground(condition?: string, temperatureC?: number) {
   const lower = condition?.toLowerCase() || ""
-  if (lower.includes("chuva") || lower.includes("garoa") || lower.includes("tempestade")) {
+  const t = temperatureC ?? 22
+  const isHot = t >= HOT_TEMP_C
+
+  const isRain =
+    lower.includes("chuva") ||
+    lower.includes("garoa") ||
+    lower.includes("tempestade") ||
+    lower.includes("pancadas")
+
+  if (isRain) {
     return "url('https://images.unsplash.com/photo-1515694346937-94d85e41e6f0?w=1400&q=80')"
   }
+
+  if (isHot) {
+    // Céu limpo → sol forte
+    if (lower === "céu limpo" || (lower.includes("limpo") && !lower.includes("principalmente") && !lower.includes("parcialmente"))) {
+      return "url('https://images.unsplash.com/photo-1472120435266-53107fd0c44a?w=1400&q=80')"
+    }
+    // Quente + nuvens (nublado, parcial, principalmente limpo, névoa leve): sol aparecendo nas nuvens
+    if (
+      lower.includes("nublado") ||
+      lower.includes("parcialmente") ||
+      lower.includes("principalmente") ||
+      lower.includes("névoa")
+    ) {
+      return "url('https://images.unsplash.com/photo-1517483000871-1dbf64a6e1c6?w=1400&q=80')"
+    }
+    // Dia quente sem classificação explícita de nuvem → sol
+    return "url('https://images.unsplash.com/photo-1472120435266-53107fd0c44a?w=1400&q=80')"
+  }
+
   if (lower.includes("nublado") || lower.includes("névoa")) {
     return "url('https://images.unsplash.com/photo-1501630834273-4b5604d2ee31?w=1400&q=80')"
   }
+
   return "url('https://images.unsplash.com/photo-1472120435266-53107fd0c44a?w=1400&q=80')"
 }
 
@@ -94,6 +139,19 @@ function getClimateBackground(condition?: string) {
   if (lower.includes("nublado")) return "url('https://images.unsplash.com/photo-1534088568595-a066f410bcda?w=1400&q=80')"
   return "url('https://images.unsplash.com/photo-1501973801540-537f08ccae7b?w=1400&q=80')"
 }
+
+/** Vidro bem leve: fundo quase só a foto; blur suave. */
+function photoPanelClass() {
+  return cn(
+    "rounded-xl border border-white/10 bg-transparent p-3.5 text-white shadow-sm backdrop-blur-[1px]",
+    "[&_.text-base.font-semibold]:[text-shadow:0_1px_4px_rgba(0,0,0,1),0_0_16px_rgba(0,0,0,0.65)]",
+    "[&_.text-4xl]:[text-shadow:0_2px_4px_rgba(0,0,0,1),0_0_24px_rgba(0,0,0,0.75)]",
+    "[&_p]:[text-shadow:0_1px_4px_rgba(0,0,0,0.98),0_0_18px_rgba(0,0,0,0.65)]"
+  )
+}
+
+const photoMutedClass =
+  "text-white [text-shadow:0_1px_4px_rgba(0,0,0,0.98),0_0_16px_rgba(0,0,0,0.6)]"
 
 export function WeatherConditions() {
   const [weather, setWeather] = useState<WeatherData | null>(null)
@@ -200,9 +258,19 @@ export function WeatherConditions() {
   const cardBackgrounds = {
     waves: getWaveBackground(marine?.waveHeight),
     wind: getWindBackground(weather?.windSpeed),
-    temp: getTempBackground(weather?.condition),
+    temp: getTempBackground(weather?.condition, weather?.temperature),
     climate: getClimateBackground(weather?.condition),
   } as const
+
+  const tempIsHot = (weather?.temperature ?? 0) >= HOT_TEMP_C
+  const tempLower = weather?.condition?.toLowerCase() ?? ""
+  const tempShowSunBehindClouds =
+    tempIsHot &&
+    (tempLower.includes("nublado") ||
+      tempLower.includes("parcialmente") ||
+      tempLower.includes("principalmente") ||
+      tempLower.includes("névoa"))
+  const TempSkyIcon = tempShowSunBehindClouds ? CloudSun : Sun
 
   return (
     <section id="condicoes" className="relative py-24 bg-gradient-to-b from-cyan-50 via-sky-50 to-blue-100 overflow-hidden">
@@ -244,133 +312,171 @@ export function WeatherConditions() {
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
           {/* Wave Height */}
           <Card
-            className="group relative overflow-hidden hover:shadow-lg transition-all duration-300 border-cyan-200 bg-transparent"
-            style={{ backgroundImage: cardBackgrounds.waves, backgroundSize: "cover", backgroundPosition: "center" }}
+            className="group relative min-h-[180px] overflow-hidden hover:shadow-lg transition-all duration-300 border-cyan-200 bg-transparent"
+            style={{
+              backgroundImage: cardBackgrounds.waves,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              backgroundRepeat: "no-repeat",
+            }}
           >
-            <div className="absolute inset-0 bg-white/20 group-hover:bg-white/15 transition-colors" />
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-base font-semibold text-white">
-                <Waves className="h-5 w-5 text-cyan-600 animate-float-gentle" />
-                Altura das Ondas
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="relative z-10">
-              {loading ? (
-                <div className="animate-pulse h-12 bg-muted rounded" />
-              ) : (
-                <>
-                  <div className="text-4xl font-bold text-white">
-                    {marine?.waveHeight.toFixed(1)}m
-                  </div>
-                  <p className="text-sm text-white/95 mt-1 font-medium">
-                    Período: {marine?.wavePeriod}s | {marine?.swellDirection}
-                  </p>
-                  <div className="mt-3 h-2 w-full rounded-full bg-cyan-100 overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-cyan-400 to-blue-500 transition-all duration-700"
-                      style={{ width: `${Math.min((marine?.waveHeight || 0) * 40, 100)}%` }}
-                    />
-                  </div>
-                </>
-              )}
-            </CardContent>
+            <div className="relative z-10 p-4">
+              <div className={photoPanelClass()}>
+                <div className="flex items-center gap-2 text-base font-semibold text-white">
+                  <Waves className={cn("h-5 w-5 shrink-0 animate-float-gentle text-white", iconColorShadow)} />
+                  Altura das Ondas
+                </div>
+                {loading ? (
+                  <div className="mt-3 h-12 animate-pulse rounded-xl bg-white/12" />
+                ) : (
+                  <>
+                    <div className="mt-2 text-4xl font-bold tabular-nums text-white">
+                      {marine?.waveHeight.toFixed(1)}m
+                    </div>
+                    <p className={cn("mt-1 text-sm font-medium", photoMutedClass)}>
+                      Período: {marine?.wavePeriod}s | {marine?.swellDirection}
+                    </p>
+                    <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-white/12">
+                      <div
+                        className="h-full bg-gradient-to-r from-cyan-400 to-blue-500 transition-all duration-700"
+                        style={{ width: `${Math.min((marine?.waveHeight || 0) * 40, 100)}%` }}
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
           </Card>
 
           {/* Wind */}
           <Card
-            className="group relative overflow-hidden hover:shadow-lg transition-all duration-300 border-sky-200 bg-transparent animate-wind-bg"
-            style={{ backgroundImage: cardBackgrounds.wind, backgroundSize: "120% 120%", backgroundPosition: "center" }}
+            className="group relative min-h-[180px] overflow-hidden hover:shadow-lg transition-all duration-300 border-sky-200 bg-transparent animate-wind-bg"
+            style={{
+              backgroundImage: cardBackgrounds.wind,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              backgroundRepeat: "no-repeat",
+            }}
           >
-            <div className="absolute inset-0 bg-white/20 group-hover:bg-white/15 transition-colors" />
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-base font-semibold text-white">
-                <Wind className="h-5 w-5 text-sky-600 group-hover:translate-x-1 transition-transform" />
-                Vento
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="relative z-10">
-              {loading ? (
-                <div className="animate-pulse h-12 bg-muted rounded" />
-              ) : (
-                <>
-                  <div className="text-4xl font-bold text-white">
-                    {weather?.windSpeed}km/h
-                  </div>
-                  <p className="text-sm text-white/95 mt-1 font-medium">
-                    Direção: {weather?.windDirection}
-                  </p>
-                  <div className="mt-3 flex gap-1.5">
-                    <span className="h-1.5 w-6 rounded-full bg-sky-300 animate-wind-flow" />
-                    <span className="h-1.5 w-10 rounded-full bg-sky-400 animate-wind-flow [animation-delay:180ms]" />
-                    <span className="h-1.5 w-8 rounded-full bg-sky-500 animate-wind-flow [animation-delay:360ms]" />
-                  </div>
-                </>
-              )}
-            </CardContent>
+            <div className="relative z-10 flex min-h-[180px] flex-col justify-end p-4">
+              <div className={photoPanelClass()}>
+                <div className="flex items-center gap-2 text-base font-semibold text-white">
+                  <Wind className={cn("h-5 w-5 shrink-0 text-white transition-transform group-hover:translate-x-1", iconColorShadow)} />
+                  Vento
+                </div>
+                {loading ? (
+                  <div className="mt-3 h-12 animate-pulse rounded-xl bg-white/12" />
+                ) : (
+                  <>
+                    <div className="mt-2 text-4xl font-bold tabular-nums text-white">{weather?.windSpeed}km/h</div>
+                    <p className={cn("mt-1 text-sm font-medium", photoMutedClass)}>
+                      Direção: {weather?.windDirection}
+                    </p>
+                    <div className="mt-3 flex gap-1.5">
+                      <span className="h-1.5 w-6 rounded-full bg-white/60 animate-wind-flow" />
+                      <span className="h-1.5 w-10 rounded-full bg-white/75 animate-wind-flow [animation-delay:180ms]" />
+                      <span className="h-1.5 w-8 rounded-full bg-white/90 animate-wind-flow [animation-delay:360ms]" />
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
           </Card>
 
           {/* Temperature */}
           <Card
-            className="group relative overflow-hidden hover:shadow-lg transition-all duration-300 border-amber-200 bg-transparent"
-            style={{ backgroundImage: cardBackgrounds.temp, backgroundSize: "cover", backgroundPosition: "center" }}
+            className="group relative min-h-[180px] overflow-hidden hover:shadow-lg transition-all duration-300 border-amber-200 bg-transparent"
+            style={{
+              backgroundImage: cardBackgrounds.temp,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              backgroundRepeat: "no-repeat",
+            }}
           >
-            <div className="absolute inset-0 bg-white/20 group-hover:bg-white/15 transition-colors" />
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-base font-semibold text-white">
-                <Thermometer className="h-5 w-5 text-amber-500" />
-                Temperatura
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="relative z-10">
-              {loading ? (
-                <div className="animate-pulse h-12 bg-muted rounded" />
-              ) : (
-                <>
-                  <div className="text-4xl font-bold text-white">
-                    {weather?.temperature}°C
-                  </div>
-                  <p className="text-sm text-white/95 mt-1 font-medium">
-                    Água: ~{marine?.waterTemp}°C
-                  </p>
-                  <Sun className="mt-2 h-5 w-5 text-amber-400 animate-float-gentle" />
-                </>
-              )}
-            </CardContent>
+            <div className="relative z-10 p-4">
+              <div className={photoPanelClass()}>
+                <div className="flex items-center gap-2 text-base font-semibold text-white">
+                  <Thermometer className={cn("h-5 w-5 shrink-0 text-amber-400", iconColorShadow)} />
+                  Temperatura
+                </div>
+                {loading ? (
+                  <div className="mt-3 h-12 animate-pulse rounded-xl bg-white/12" />
+                ) : (
+                  <>
+                    <div className="mt-2 text-4xl font-bold tabular-nums text-white">{weather?.temperature}°C</div>
+                    <p className={cn("mt-1 text-sm font-medium", photoMutedClass)}>
+                      Água: ~{marine?.waterTemp}°C
+                    </p>
+                    <TempSkyIcon
+                      className={cn(
+                        "mt-2 h-5 w-5 animate-float-gentle",
+                        TempSkyIcon === Sun ? "text-amber-400" : "text-sky-400",
+                        iconColorShadow
+                      )}
+                    />
+                  </>
+                )}
+              </div>
+            </div>
           </Card>
 
           {/* Weather */}
           <Card
-            className="group relative overflow-hidden hover:shadow-lg transition-all duration-300 border-blue-200 bg-transparent"
-            style={{ backgroundImage: cardBackgrounds.climate, backgroundSize: "cover", backgroundPosition: "center" }}
+            className="group relative min-h-[180px] overflow-hidden hover:shadow-lg transition-all duration-300 border-blue-200 bg-transparent"
+            style={{
+              backgroundImage: cardBackgrounds.climate,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              backgroundRepeat: "no-repeat",
+            }}
           >
-            <div className="absolute inset-0 bg-white/20 group-hover:bg-white/15 transition-colors" />
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-base font-semibold text-white">
-                <WeatherIcon className="h-5 w-5 text-primary" />
-                Clima
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="relative z-10">
-              {loading ? (
-                <div className="animate-pulse h-12 bg-muted rounded" />
-              ) : (
-                <>
-                  <div className="text-4xl font-bold text-foreground flex items-center gap-2">
-                    <WeatherIcon className="h-10 w-10 text-sunset animate-float-gentle" />
-                    {isRain && <CloudRain className="h-8 w-8 text-blue-500 animate-pulse" />}
-                    {isCloudy && <Cloud className="h-8 w-8 text-slate-500 animate-pulse" />}
-                  </div>
-                  <p className="text-sm text-slate-700 mt-1 font-medium">
-                    {weather?.condition} | {weather?.humidity}% umidade
-                  </p>
-                  <div className="mt-3 flex items-center gap-2 text-blue-500">
-                    <Droplets className="h-4 w-4 animate-float-gentle" />
-                    <Droplets className="h-4 w-4 animate-float-gentle [animation-delay:140ms]" />
-                    <Droplets className="h-4 w-4 animate-float-gentle [animation-delay:280ms]" />
-                  </div>
-                </>
-              )}
-            </CardContent>
+            <div className="relative z-10 p-4">
+              <div className={photoPanelClass()}>
+                <div className="flex items-center gap-2 text-base font-semibold text-white">
+                  <WeatherIcon
+                    className={cn(
+                      "h-5 w-5 shrink-0",
+                      getWeatherIconColorClass(WeatherIcon),
+                      iconColorShadow
+                    )}
+                  />
+                  Clima
+                </div>
+                {loading ? (
+                  <div className="mt-3 h-12 animate-pulse rounded-xl bg-white/12" />
+                ) : (
+                  <>
+                    <div className="mt-1 flex flex-wrap items-center gap-2">
+                      <WeatherIcon
+                        className={cn(
+                          "h-10 w-10 animate-float-gentle",
+                          getWeatherIconColorClass(WeatherIcon),
+                          iconColorShadow
+                        )}
+                      />
+                      {isRain && (
+                        <CloudRain className={cn("h-8 w-8 animate-pulse text-blue-500", iconColorShadow)} />
+                      )}
+                      {isCloudy && (
+                        <Cloud className={cn("h-8 w-8 animate-pulse text-sky-500", iconColorShadow)} />
+                      )}
+                    </div>
+                    <p className={cn("mt-2 text-sm font-medium leading-snug", photoMutedClass)}>
+                      {weather?.condition} | {weather?.humidity}% umidade
+                    </p>
+                    <div className="mt-3 flex items-center gap-2">
+                      <Droplets className={cn("h-4 w-4 animate-float-gentle text-sky-400", iconColorShadow)} />
+                      <Droplets
+                        className={cn("h-4 w-4 animate-float-gentle text-sky-400 [animation-delay:140ms]", iconColorShadow)}
+                      />
+                      <Droplets
+                        className={cn("h-4 w-4 animate-float-gentle text-sky-400 [animation-delay:280ms]", iconColorShadow)}
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
           </Card>
         </div>
 

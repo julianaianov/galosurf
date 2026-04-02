@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -38,22 +38,6 @@ const experienceLevels = [
 // Ingryd's WhatsApp number (replace with real number)
 const WHATSAPP_NUMBER = "5521995007374"
 
-// Emojis como code points (evita "?" na URL/WhatsApp por sequências ZWJ quebradas)
-const WA = {
-  surf: String.fromCodePoint(0x1f3c4), // pessoa surfando
-  user: String.fromCodePoint(0x1f464), // nome
-  phone: String.fromCodePoint(0x1f4f1), // telefone
-  email: String.fromCodePoint(0x1f4e7), // e-mail
-  package: String.fromCodePoint(0x1f4e6), // pacote
-  money: String.fromCodePoint(0x1f4b0), // valor
-  calendar: String.fromCodePoint(0x1f4c5), // data
-  clock: String.fromCodePoint(0x23f0), // horário
-  target: String.fromCodePoint(0x1f3af), // nível
-  chat: String.fromCodePoint(0x1f4ac), // observações
-  check: String.fromCodePoint(0x2705), // pagamento online
-  card: String.fromCodePoint(0x1f4b3), // pagamento no local
-} as const
-
 export function Booking() {
   const [step, setStep] = useState(1)
   const [formData, setFormData] = useState({
@@ -69,6 +53,11 @@ export function Booking() {
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
+  /** URL da conversa (para link manual se o pop-up for bloqueado) */
+  const [confirmationWhatsUrl, setConfirmationWhatsUrl] = useState<string | null>(null)
+  /** Após fechar o modal: mensagem na seção + opção de novo agendamento */
+  const [showPostBookingThanks, setShowPostBookingThanks] = useState(false)
+  const successModalTimeoutRef = useRef<number | null>(null)
 
   // Get package from URL if present
   useEffect(() => {
@@ -88,23 +77,24 @@ export function Booking() {
     const pkg = packages.find(p => p.id === formData.package)
     const exp = experienceLevels.find(e => e.id === formData.experience)
     
-    const message = `${WA.surf} *NOVA RESERVA DE AULA*
+    // Só texto (sem emoji): links wa.me + WhatsApp costumam mostrar "" emojis em vários aparelhos.
+    const message = `*NOVA RESERVA DE AULA*
 
-${WA.user} *Nome:* ${formData.name}
-${WA.phone} *Telefone:* ${formData.phone}
-${WA.email} *Email:* ${formData.email}
+*Nome:* ${formData.name}
+*Telefone:* ${formData.phone}
+*Email:* ${formData.email}
 
-${WA.package} *Pacote:* ${pkg?.name} (${pkg?.lessons} aula${pkg && pkg.lessons > 1 ? 's' : ''})
-${WA.money} *Valor:* R$ ${pkg?.price.toFixed(2).replace('.', ',')}
+*Pacote:* ${pkg?.name} (${pkg?.lessons} aula${pkg && pkg.lessons > 1 ? "s" : ""})
+*Valor:* R$ ${pkg?.price.toFixed(2).replace(".", ",")}
 
-${WA.calendar} *Data:* ${new Date(formData.date).toLocaleDateString('pt-BR')}
-${WA.clock} *Horário:* ${formData.time}
+*Data:* ${new Date(formData.date).toLocaleDateString("pt-BR")}
+*Horário:* ${formData.time}
 
-${WA.target} *Nível:* ${exp?.label}
+*Nível:* ${exp?.label}
 
-${formData.message ? `${WA.chat} *Observações:* ${formData.message}` : ''}
+${formData.message ? `*Observações:* ${formData.message}` : ""}
 
-${formData.payNow ? `${WA.check} Cliente deseja pagar online` : `${WA.card} Pagamento no local`}`
+*Pagamento:* ${formData.payNow ? "Cliente deseja pagar online" : "No local"}`
 
     return encodeURIComponent(message)
   }
@@ -113,16 +103,27 @@ ${formData.payNow ? `${WA.check} Cliente deseja pagar online` : `${WA.card} Paga
     e.preventDefault()
     setIsSubmitting(true)
 
-    const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${generateWhatsAppMessage()}`
-
-    // Abrir na mesma ação do clique (sem await/setTimeout), senão o navegador bloqueia window.open em produção.
-    const opened = window.open(whatsappUrl, "_blank", "noopener,noreferrer")
-    if (!opened) {
-      window.location.href = whatsappUrl
+    if (successModalTimeoutRef.current) {
+      window.clearTimeout(successModalTimeoutRef.current)
+      successModalTimeoutRef.current = null
     }
 
-    setIsSuccess(true)
+    const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${generateWhatsAppMessage()}`
+
+    // Abrir WhatsApp primeiro (mesmo gesto do clique evita bloqueio de pop-up).
+    const opened = window.open(whatsappUrl, "_blank", "noopener,noreferrer")
+
+    setConfirmationWhatsUrl(whatsappUrl)
     setIsSubmitting(false)
+
+    if (opened) {
+      successModalTimeoutRef.current = window.setTimeout(() => {
+        successModalTimeoutRef.current = null
+        setIsSuccess(true)
+      }, 500)
+    } else {
+      setIsSuccess(true)
+    }
   }
 
   const handlePayment = () => {
@@ -139,20 +140,35 @@ ${formData.payNow ? `${WA.check} Cliente deseja pagar online` : `${WA.card} Paga
     return tomorrow.toISOString().split('T')[0]
   }
 
-  const resetBookingAfterClose = () => {
+  const initialForm = () => ({
+    name: "",
+    phone: "",
+    email: "",
+    package: "avulsa" as const,
+    date: "",
+    time: "",
+    experience: "iniciante" as const,
+    message: "",
+    payNow: false,
+  })
+
+  /** Fecha o modal de sucesso, limpa timers e mostra o aviso na própria seção de agendamento. */
+  const finishSuccessFlow = () => {
+    if (successModalTimeoutRef.current) {
+      window.clearTimeout(successModalTimeoutRef.current)
+      successModalTimeoutRef.current = null
+    }
     setIsSuccess(false)
+    setConfirmationWhatsUrl(null)
     setStep(1)
-    setFormData({
-      name: "",
-      phone: "",
-      email: "",
-      package: "avulsa",
-      date: "",
-      time: "",
-      experience: "iniciante",
-      message: "",
-      payNow: false,
-    })
+    setFormData(initialForm())
+    setShowPostBookingThanks(true)
+  }
+
+  const startNewBooking = () => {
+    setShowPostBookingThanks(false)
+    setStep(1)
+    setFormData(initialForm())
   }
 
   return (
@@ -160,7 +176,7 @@ ${formData.payNow ? `${WA.check} Cliente deseja pagar online` : `${WA.card} Paga
       <Dialog
         open={isSuccess}
         onOpenChange={(open) => {
-          if (!open) resetBookingAfterClose()
+          if (!open) finishSuccessFlow()
         }}
       >
         <DialogContent className="max-h-[min(90dvh,100%)] overflow-y-auto sm:max-w-md">
@@ -176,9 +192,23 @@ ${formData.payNow ? `${WA.check} Cliente deseja pagar online` : `${WA.card} Paga
               <strong className="text-foreground">confirmar seu agendamento</strong>
               {" "}(data, horário e detalhes da aula).
             </DialogDescription>
+            {confirmationWhatsUrl && (
+              <p className="text-center text-sm text-muted-foreground">
+                Se o WhatsApp não abriu em outra aba,{" "}
+                <a
+                  href={confirmationWhatsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-primary underline underline-offset-2 hover:text-primary/80"
+                >
+                  clique aqui para abrir a conversa
+                </a>
+                .
+              </p>
+            )}
           </DialogHeader>
           <DialogFooter className="sm:justify-center">
-            <Button type="button" className="w-full sm:w-auto" onClick={resetBookingAfterClose}>
+            <Button type="button" className="w-full sm:w-auto" onClick={finishSuccessFlow}>
               Entendi
             </Button>
           </DialogFooter>
@@ -201,6 +231,30 @@ ${formData.payNow ? `${WA.check} Cliente deseja pagar online` : `${WA.card} Paga
         </div>
 
         <Card className="max-w-2xl mx-auto">
+          {showPostBookingThanks ? (
+            <CardContent className="space-y-6 py-10">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-green-100">
+                <Check className="h-8 w-8 text-green-600" />
+              </div>
+              <div className="space-y-3 text-center">
+                <h3 className="text-xl font-semibold text-foreground">
+                  Mensagem enviada?
+                </h3>
+                <p className="text-muted-foreground leading-relaxed text-pretty">
+                  Se você enviou a mensagem com sucesso no{" "}
+                  <strong className="text-foreground">WhatsApp</strong>, em breve retornaremos o
+                  contato para confirmar data, horário e detalhes da aula.
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Não esqueça de clicar em enviar na conversa, se ainda não enviou.
+                </p>
+              </div>
+              <Button type="button" className="w-full h-12" size="lg" onClick={startNewBooking}>
+                Agendar outra aula
+              </Button>
+            </CardContent>
+          ) : (
+            <>
           {/* Progress Steps */}
           <div className="px-6 pt-6">
             <div className="flex items-center justify-between mb-8">
@@ -490,6 +544,8 @@ ${formData.payNow ? `${WA.check} Cliente deseja pagar online` : `${WA.card} Paga
               </CardContent>
             )}
           </form>
+            </>
+          )}
         </Card>
       </div>
     </section>
